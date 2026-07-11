@@ -370,12 +370,6 @@ footer{padding:0 0 60px}
     </div>
   </section>
 
-  <!-- ================= BELT ================= -->
-  <div class="belt" aria-hidden="true">
-    <div class="belt-track">
-      <span>Exportieren · Umbenennen · Hochladen · Kopieren · Eintippen · Abgleichen · Nachfassen · Zusammensuchen · Formatieren · Erinnern · Exportieren · Umbenennen · Hochladen · Kopieren · Eintippen · Abgleichen · Nachfassen · Zusammensuchen · Formatieren · Erinnern · </span><span>Exportieren · Umbenennen · Hochladen · Kopieren · Eintippen · Abgleichen · Nachfassen · Zusammensuchen · Formatieren · Erinnern · Exportieren · Umbenennen · Hochladen · Kopieren · Eintippen · Abgleichen · Nachfassen · Zusammensuchen · Formatieren · Erinnern · </span>
-    </div>
-  </div>
 
   <!-- ================= PROBLEM ================= -->
   <section class="wrap sec reveal" id="problem">
@@ -596,7 +590,7 @@ footer{padding:0 0 60px}
     /* keep #intro in the DOM (hidden) so it can be replayed */
     function finish(){ if(!el||el.classList.contains('done'))return;
       try{ sessionStorage.setItem('sw_intro','1'); }catch(e){}
-      if(vid){ try{vid.pause();}catch(e){} }
+      if(vid){ try{vid.pause(); vid.muted=true;}catch(e){} }
       el.classList.add('done'); start(); }
     function replay(){ if(!el||!vid)return;
       el.classList.remove('done'); if(play)play.style.display='none';
@@ -615,23 +609,12 @@ footer{padding:0 0 60px}
 
     if(reduce || seen || !el || !vid){ if(el)el.classList.add('done'); start(); return; }
 
-    function armUnmute(){
-      function un(){ try{vid.muted=false;}catch(e){} snd.innerHTML='<b>♪</b> Ton aus'; if(vid.paused) vid.play().catch(function(){}); }
-      ['pointerdown','touchstart','keydown','scroll'].forEach(function(ev){ window.addEventListener(ev,un,{once:true,capture:true,passive:true}); });
-    }
     function startPlayback(){
-      /* Ziel: Ton von Anfang an. Browser blocken Auto-Play mit Ton meist → dann stumm starten
-         und beim ersten Antippen/Scrollen sofort Ton dazuschalten. */
-      vid.muted=false;
+      /* Stummer Auto-Play — KEIN Auto-Ton (sonst geht Musik beim Scrollen von selbst an).
+         Ton nur über bewusste Klicks: „♪ Ton an" oder der „▶ Trailer"-Button. */
+      vid.muted=true;
       var p=vid.play();
-      if(p&&p.then){
-        p.then(function(){ snd.innerHTML='<b>♪</b> Ton aus'; })
-         .catch(function(){
-            vid.muted=true; snd.innerHTML='<b>♪</b> Ton an';
-            var p2=vid.play(); if(p2&&p2.catch){ p2.catch(function(){ play.style.display='block'; }); }
-            armUnmute();
-         });
-      } else { armUnmute(); }
+      if(p&&p.catch){ p.catch(function(){ if(play)play.style.display='block'; }); }
     }
     if(vid.readyState>=2) startPlayback();
     else { vid.addEventListener('loadeddata',startPlayback,{once:true});
