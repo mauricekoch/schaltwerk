@@ -597,18 +597,28 @@ footer{padding:0 0 60px}
     });
     play.addEventListener('click',function(){ play.style.display='none'; vid.play().catch(function(){}); });
 
-    function tryAutoplay(){
-      var p=vid.play();
-      if(p&&p.catch){ p.catch(function(){
-        /* muted autoplay blocked (rare on real browsers): offer a play button, don't trap the user */
-        play.style.display='block';
-        setTimeout(function(){ if(vid.paused && vid.currentTime<0.1) finish(); }, 9000);
-      }); }
+    function armUnmute(){
+      function un(){ try{vid.muted=false;}catch(e){} snd.innerHTML='<b>♪</b> Ton aus'; if(vid.paused) vid.play().catch(function(){}); }
+      ['pointerdown','touchstart','keydown','scroll'].forEach(function(ev){ window.addEventListener(ev,un,{once:true,capture:true,passive:true}); });
     }
-    if(vid.readyState>=2) tryAutoplay();
-    else { vid.addEventListener('loadeddata',tryAutoplay,{once:true});
+    function startPlayback(){
+      /* Ziel: Ton von Anfang an. Browser blocken Auto-Play mit Ton meist → dann stumm starten
+         und beim ersten Antippen/Scrollen sofort Ton dazuschalten. */
+      vid.muted=false;
+      var p=vid.play();
+      if(p&&p.then){
+        p.then(function(){ snd.innerHTML='<b>♪</b> Ton aus'; })
+         .catch(function(){
+            vid.muted=true; snd.innerHTML='<b>♪</b> Ton an';
+            var p2=vid.play(); if(p2&&p2.catch){ p2.catch(function(){ play.style.display='block'; }); }
+            armUnmute();
+         });
+      } else { armUnmute(); }
+    }
+    if(vid.readyState>=2) startPlayback();
+    else { vid.addEventListener('loadeddata',startPlayback,{once:true});
            setTimeout(function(){ if(vid.readyState<2) finish(); }, 7000); }
-    setTimeout(finish, 22000); /* absolute safety */
+    setTimeout(finish, 16000); /* absolute safety (Trailer ~10.4s) */
   })();
 
   /* ---------- STATE MACHINE ---------- */
