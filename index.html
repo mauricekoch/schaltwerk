@@ -618,7 +618,7 @@ footer{padding:0 0 60px}
     if(vid.readyState>=2) startPlayback();
     else { vid.addEventListener('loadeddata',startPlayback,{once:true});
            setTimeout(function(){ if(vid.readyState<2) finish(); }, 7000); }
-    setTimeout(finish, 16000); /* absolute safety (Trailer ~10.4s) */
+    setTimeout(finish, 23000); /* absolute safety (Trailer ~19.4s) */
   })();
 
   /* ---------- STATE MACHINE ---------- */
