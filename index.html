@@ -78,20 +78,20 @@ h1,h2,h3,h4{font-family:'SairaCond','Bahnschrift','Arial Narrow',sans-serif;font
 .blink{animation:blink 1.7s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
 
-/* ================= BOOT OVERLAY ================= */
-#boot{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;
-  background:radial-gradient(120% 90% at 50% 40%,#1a1712,#0c0a08 100%);color:#ede6d8;transition:opacity .6s ease,visibility .6s}
-#boot.done{opacity:0;visibility:hidden;pointer-events:none}
-.boot-mark{font-family:'SairaCond',sans-serif;font-weight:700;text-transform:uppercase;font-size:clamp(2.4rem,9vw,5rem);letter-spacing:.02em;line-height:.9;color:#ede6d8;position:relative}
-.boot-mark span{color:var(--accent)}
-.boot-sub{font:600 .66rem/1.4 'Saira';letter-spacing:.34em;text-transform:uppercase;color:#8f8670;margin-top:-14px}
-.boot-log{font:400 .74rem/1.7 'PlexMono',monospace;color:#6f8a6a;min-height:5.1em;width:min(90vw,360px);text-align:left}
-.boot-log b{color:var(--green);font-weight:400}
-.boot-log .cur{color:#a29880}
-.boot-bar{width:min(90vw,360px);height:6px;border:1px solid #3a3429;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.4)}
-.boot-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#ffb021)}
-.boot-skip{position:fixed;bottom:24px;right:26px;font:600 .64rem 'Saira';letter-spacing:.16em;text-transform:uppercase;color:#6b6355;background:none;border:1px solid #3a3429;border-radius:6px;padding:8px 14px;cursor:pointer}
-.boot-skip:hover{color:#ede6d8;border-color:#6b6355}
+/* ================= INTRO (TRAILER) OVERLAY ================= */
+#intro{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:#0a0806;transition:opacity .8s ease,visibility .8s}
+#intro.done{opacity:0;visibility:hidden;pointer-events:none}
+#intro video{width:100%;height:100%;object-fit:contain;background:#0a0806}
+.intro-ctl{position:fixed;bottom:26px;right:26px;display:flex;gap:10px;z-index:101}
+.intro-btn{font:600 .66rem 'Saira',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#cabfa8;
+  background:rgba(0,0,0,.4);border:1px solid #4a4236;border-radius:6px;padding:10px 16px;cursor:pointer;backdrop-filter:blur(4px);transition:.15s}
+.intro-btn:hover{color:#fff;border-color:#9a8f76}
+.intro-btn b{color:var(--accent);font-weight:600}
+.intro-play{position:fixed;left:50%;top:50%;translate:-50% -50%;z-index:101;display:none;
+  width:104px;height:104px;border-radius:50%;border:2px solid #cabfa8;background:rgba(0,0,0,.45);
+  color:#fff;font:400 30px/1 'Saira',sans-serif;cursor:pointer;backdrop-filter:blur(5px);padding-left:6px;transition:.15s}
+.intro-play:hover{border-color:var(--accent);color:var(--accent);transform:translate(-50%,-50%) scale(1.06)}
 
 /* ================= TOP PROGRESS + HEADER ================= */
 #scanbar{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--accent),var(--amber));z-index:60;transition:width .1s linear}
@@ -285,17 +285,20 @@ footer{padding:0 0 60px}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition-duration:.001s!important}
   .reveal{opacity:1;translate:0 0}
-  #boot{display:none}
+  #intro{display:none}
 }
 </style>
 
-<!-- ================= BOOT ================= -->
-<div id="boot" role="status" aria-label="System startet">
-  <div class="boot-mark">SCHALT<span>WERK</span></div>
-  <div class="boot-sub">Leitstand wird hochgefahren</div>
-  <div class="boot-log" id="bootLog"></div>
-  <div class="boot-bar"><i id="bootBar"></i></div>
-  <button class="boot-skip" id="bootSkip">Überspringen →</button>
+<!-- ================= INTRO / TRAILER ================= -->
+<div id="intro" aria-label="Intro-Trailer">
+  <video id="introVid" muted playsinline preload="auto" poster="poster.jpg">
+    <source src="trailer.mp4" type="video/mp4">
+  </video>
+  <button class="intro-play" id="introPlay" aria-label="Trailer abspielen">▶</button>
+  <div class="intro-ctl">
+    <button class="intro-btn" id="introSound"><b>♪</b> Ton an</button>
+    <button class="intro-btn" id="introSkip">Überspringen →</button>
+  </div>
 </div>
 
 <div id="scanbar"></div>
@@ -589,31 +592,37 @@ footer{padding:0 0 60px}
     if(p.img){ im.src=p.img; im.style.display='block'; if(ic)ic.style.display='none'; if(aw)aw.style.display='none'; }
   });
 
-  /* ---------- BOOT SEQUENCE ---------- */
-  (function boot(){
-    var el=$('#boot'), bar=$('#bootBar'), logEl=$('#bootLog'), skip=$('#bootSkip');
-    if(reduce||!el){ if(el)el.classList.add('done'); start(); return; }
-    var lines=[
-      "init leitstand ........ <b>ok</b>",
-      "lade baugruppen 01–04 . <b>ok</b>",
-      "pruefe schnittstellen . <b>ok</b>",
-      "kalibriere durchsatz .. <b>ok</b>",
-      "betriebsart ........... HAND"
-    ];
-    var i=0,txt="";
-    var li=setInterval(function(){
-      if(i<lines.length){ txt+=lines[i]+"<br>"; logEl.innerHTML=txt+'<span class="cur">▮</span>'; i++; }
-    },300);
-    var p=0;
-    var pb=setInterval(function(){
-      p=Math.min(100,p+ (4+Math.random()*7));
-      bar.style.width=p+"%";
-      if(p>=100){ clearInterval(pb); clearInterval(li); logEl.innerHTML=txt; setTimeout(finish,320); }
-    },70);
-    var done=false;
-    function finish(){ if(done)return; done=true; clearInterval(pb); clearInterval(li); el.classList.add('done'); start(); }
+  /* ---------- INTRO TRAILER ---------- */
+  (function intro(){
+    var el=$('#intro'), vid=$('#introVid'), skip=$('#introSkip'), snd=$('#introSound'), play=$('#introPlay');
+    var seen=false; try{ seen=sessionStorage.getItem('sw_intro')==='1'; }catch(e){}
+    function finish(){ if(!el||el.classList.contains('done'))return;
+      try{ sessionStorage.setItem('sw_intro','1'); }catch(e){}
+      if(vid){ try{vid.pause();}catch(e){} }
+      el.classList.add('done'); setTimeout(function(){ if(el)el.remove(); },900); start(); }
+    if(reduce || seen || !el || !vid){ if(el)el.classList.add('done'); if(el)setTimeout(function(){el.remove();},50); start(); return; }
+
     skip.addEventListener('click',finish);
-    setTimeout(finish,4200);
+    vid.addEventListener('ended',finish);
+    vid.addEventListener('error',finish);
+    snd.addEventListener('click',function(){
+      vid.muted=!vid.muted; snd.innerHTML= vid.muted ? '<b>♪</b> Ton an' : '<b>♪</b> Ton aus';
+      if(vid.paused) vid.play().catch(function(){});
+    });
+    play.addEventListener('click',function(){ play.style.display='none'; vid.play().catch(function(){}); });
+
+    function tryAutoplay(){
+      var p=vid.play();
+      if(p&&p.catch){ p.catch(function(){
+        /* muted autoplay blocked (rare on real browsers): offer a play button, don't trap the user */
+        play.style.display='block';
+        setTimeout(function(){ if(vid.paused && vid.currentTime<0.1) finish(); }, 9000);
+      }); }
+    }
+    if(vid.readyState>=2) tryAutoplay();
+    else { vid.addEventListener('loadeddata',tryAutoplay,{once:true});
+           setTimeout(function(){ if(vid.readyState<2) finish(); }, 7000); }
+    setTimeout(finish, 22000); /* absolute safety */
   })();
 
   /* ---------- STATE MACHINE ---------- */
