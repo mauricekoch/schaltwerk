@@ -587,15 +587,28 @@ footer{padding:0 0 60px}
   (function intro(){
     var el=$('#intro'), vid=$('#introVid'), skip=$('#introSkip'), snd=$('#introSound'), play=$('#introPlay');
     var seen=false; try{ seen=sessionStorage.getItem('sw_intro')==='1'; }catch(e){}
+    /* Ton an bei Klick/Tipp/Taste — aber NUR solange das Intro sichtbar läuft.
+       Listener werden bei finish() entfernt (kein „scroll": das löste früher
+       Überraschungs-Musik beim Browsen aus). */
+    var unEvts=['pointerdown','touchstart','keydown'];
+    function unmuteOnce(){
+      if(!el || el.classList.contains('done') || !vid || vid.paused) return;
+      try{vid.muted=false;}catch(e){}
+      if(snd) snd.innerHTML='<b>♪</b> Ton aus';
+      disarmUnmute();
+    }
+    function armUnmute(){ unEvts.forEach(function(ev){ window.addEventListener(ev,unmuteOnce,{capture:true,passive:true}); }); }
+    function disarmUnmute(){ unEvts.forEach(function(ev){ window.removeEventListener(ev,unmuteOnce,{capture:true}); }); }
     /* keep #intro in the DOM (hidden) so it can be replayed */
     function finish(){ if(!el||el.classList.contains('done'))return;
       try{ sessionStorage.setItem('sw_intro','1'); }catch(e){}
       if(vid){ try{vid.pause(); vid.muted=true;}catch(e){} }
+      disarmUnmute();
       el.classList.add('done'); start(); }
     function replay(){ if(!el||!vid)return;
       el.classList.remove('done'); if(play)play.style.display='none';
       try{ vid.currentTime=0; vid.muted=false; if(snd)snd.innerHTML='<b>♪</b> Ton aus'; }catch(e){}
-      vid.play().catch(function(){ try{vid.muted=true;}catch(e){} if(snd)snd.innerHTML='<b>♪</b> Ton an'; vid.play().catch(function(){}); });
+      vid.play().catch(function(){ try{vid.muted=true;}catch(e){} if(snd)snd.innerHTML='<b>♪</b> Ton an'; vid.play().catch(function(){}); armUnmute(); });
     }
     /* „▶ Trailer"-Button(s) — funktioniert auch, wenn das Intro schon lief */
     $$('[data-replay]').forEach(function(b){ b.addEventListener('click',function(e){ e.preventDefault(); replay(); }); });
@@ -610,11 +623,18 @@ footer{padding:0 0 60px}
     if(reduce || seen || !el || !vid){ if(el)el.classList.add('done'); start(); return; }
 
     function startPlayback(){
-      /* Stummer Auto-Play — KEIN Auto-Ton (sonst geht Musik beim Scrollen von selbst an).
-         Ton nur über bewusste Klicks: „♪ Ton an" oder der „▶ Trailer"-Button. */
-      vid.muted=true;
+      /* Erst mit Ton versuchen; blockt der Browser, stumm starten und
+         beim ersten Klick/Tipp den Ton dazuschalten. */
+      vid.muted=false;
       var p=vid.play();
-      if(p&&p.catch){ p.catch(function(){ if(play)play.style.display='block'; }); }
+      if(p&&p.then){
+        p.then(function(){ if(snd)snd.innerHTML='<b>♪</b> Ton aus'; })
+         .catch(function(){
+            vid.muted=true; if(snd)snd.innerHTML='<b>♪</b> Ton an';
+            var p2=vid.play(); if(p2&&p2.catch){ p2.catch(function(){ if(play)play.style.display='block'; }); }
+            armUnmute();
+         });
+      } else { armUnmute(); }
     }
     if(vid.readyState>=2) startPlayback();
     else { vid.addEventListener('loadeddata',startPlayback,{once:true});
